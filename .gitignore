@@ -1,0 +1,44 @@
+# 1️⃣ Virtual Environment (Don't include your local venv)
+venv/
+.env
+*.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 2️⃣ IDE / Editor Config Files (VSCode, PyCharm, etc.)
+.vscode/
+.idea/
+*.iml
+
+# 3️⃣ Database & Migrations
+*.sqlite3
+db.sqlite3
+db-backup/
+migrations/
+*.log
+
+# 4️⃣ Environment Variables & Secrets (Django & Hugging Face Tokens)
+.env
+*.env
+config/settings_local.py  # If you have local Django settings
+huggingface_token.txt
+
+# 5️⃣ Hugging Face Cache (Pre-downloaded models)
+~/.cache/huggingface/
+huggingface/
+
+# 6️⃣ Docker & PostgreSQL (If Used)
+*.pgdata/
+pgvector-db/
+*.pgpass
+*.DS_Store
+
+# 7️⃣ Static & Media Files (Django)
+staticfiles/
+media/
+
+# 8️⃣ Python Dependencies (Pip)
+Pipfile
+Pipfile.lock

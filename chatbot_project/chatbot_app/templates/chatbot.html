@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot with PDF Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h2 { color: #333; }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #28a745;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover { background: #218838; }
+        .pdf-list { margin-top: 20px; text-align: left; }
+        .pdf-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: #fff;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .pdf-item button {
+            background: #dc3545;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .pdf-item button:hover { background: #c82333; }
+        .chat-response {
+            margin-top: 20px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>AI Chatbot with PDF Upload</h2>
+        
+        <h3>Upload PDF</h3>
+        <input type="file" id="pdfInput">
+        <button onclick="uploadPDF()">Upload</button>
+
+        <h3>Chat with AI</h3>
+        <input type="text" id="queryInput" placeholder="Ask a question...">
+        <button onclick="queryChatbot()">Ask</button>
+        <div class="chat-response" id="chatResponse"></div>
+
+        <h3>Uploaded PDFs</h3>
+        <div class="pdf-list" id="pdfList"></div>
+    </div>
+
+    <script>
+        const API_BASE = "http://127.0.0.1:8000/api";
+
+        // 📌 Upload PDF
+        async function uploadPDF() {
+            const fileInput = document.getElementById("pdfInput");
+            if (fileInput.files.length === 0) {
+                alert("Please select a PDF file to upload.");
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            try {
+                let response = await fetch(`${API_BASE}/upload/`, {
+                    method: "POST",
+                    body: formData
+                });
+                let data = await response.json();
+
+                if (response.ok) {
+                    alert("✅ PDF Uploaded Successfully!");
+                    listPDFs();  // Refresh list
+                } else {
+                    alert("❌ Error: " + data.error);
+                }
+            } catch (error) {
+                alert("❌ Network Error: " + error.message);
+            }
+        }
+
+        // 📌 Query Chatbot
+        async function queryChatbot() {
+            const query = document.getElementById("queryInput").value.trim();
+            if (!query) {
+                alert("Please enter a question.");
+                return;
+            }
+
+            try {
+                let response = await fetch(`${API_BASE}/chat/?q=${encodeURIComponent(query)}`);
+                let data = await response.json();
+
+                document.getElementById("chatResponse").innerHTML = `
+                    <strong>AI Response:</strong> <br> ${data.results.join("<br>")}
+                `;
+            } catch (error) {
+                alert("❌ Chatbot Error: " + error.message);
+            }
+        }
+
+        // 📌 List PDFs
+        async function listPDFs() {
+            try {
+                let response = await fetch(`${API_BASE}/list/`);
+                let data = await response.json();
+
+                const pdfList = document.getElementById("pdfList");
+                pdfList.innerHTML = "";
+
+                if (data.length === 0) {
+                    pdfList.innerHTML = "<p>No PDFs uploaded.</p>";
+                    return;
+                }
+
+                data.forEach(pdf => {
+                    let pdfItem = document.createElement("div");
+                    pdfItem.className = "pdf-item";
+                    pdfItem.innerHTML = `
+                        <span>${pdf.title}</span>
+                        <button onclick="deletePDF(${pdf.id})">Delete</button>
+                    `;
+                    pdfList.appendChild(pdfItem);
+                });
+            } catch (error) {
+                alert("❌ Error loading PDFs: " + error.message);
+            }
+        }
+
+        // 📌 Delete PDF
+        async function deletePDF(pdfId) {
+            if (!confirm("Are you sure you want to delete this PDF?")) return;
+
+            try {
+                let response = await fetch(`${API_BASE}/delete/${pdfId}/`, { method: "DELETE" });
+                let data = await response.json();
+
+                if (response.ok) {
+                    alert("✅ PDF Deleted Successfully!");
+                    listPDFs();  // Refresh list
+                } else {
+                    alert("❌ Error: " + data.error);
+                }
+            } catch (error) {
+                alert("❌ Delete Error: " + error.message);
+            }
+        }
+
+        // Load PDFs on page load
+        listPDFs();
+    </script>
+
+</body>
+</html>
