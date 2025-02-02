@@ -13,7 +13,8 @@ connection = os.getenv("DATABASE_URL")
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
 # Initialize embeddings
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-mpnet-base-v2")
 
 # Initialize tokenizer and model
 tokenizer = AutoTokenizer.from_pretrained(
@@ -37,41 +38,67 @@ vector_store = PGVector(
     connection=connection,
 )
 
+
 def process_pdf(pdf_path):
     """Extracts text, generates embeddings, and stores in PGVector."""
     try:
         loader = PyPDFLoader(pdf_path)
         documents = loader.load()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200, add_start_index=True)
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000, chunk_overlap=200, add_start_index=True)
         chunks = text_splitter.split_documents(documents)
-        
+
         vector_store.add_documents(chunks)  # Store embeddings
         print("PDF processed & stored in PGVector.")
     except Exception as e:
         print(f"Error processing PDF: {e}")
+
 
 def generate_response(query):
     """Generates AI response using Llama-3.2-3B-Instruct with PDF context."""
     try:
         # Retrieve relevant context from vector database
         results = vector_store.similarity_search(query)
-        context_text = "\n".join([r.page_content for r in results]) if results else "No relevant context found."
+        context_text = "\n".join(
+            [r.page_content for r in results]) if results else "No relevant context found."
 
-        # Construct a better prompt to guide the model
-        prompt = f"""You are an AI assistant that answers questions based on provided documents.
-        If the relevant context is provided, use it to answer the question accurately.
-        If the context does not contain the answer, say 'I don't know based on the available documents.'
+        # Improved prompt with structured formatting
+        prompt = f"""
+        You are an AI assistant that answers questions based on provided documents.
 
-        User Query: {query}
-        Relevant PDF Context: {context_text}
-        
-        AI Response:
+        - If relevant context is available, **extract key facts and summarize** them concisely.
+        - Use **bullet points or numbered lists** when appropriate.
+        - If context does not contain an answer, **summarize what is available** instead of just saying "I don't know."
+        - If no relevant data exists, **offer related topics** instead of saying "I don’t know."
+
+        **User Query:** {query}
+
+        **Relevant PDF Context:**
+        {context_text}
+
+        **AI Response:**
         """
 
         # Generate response with Llama-3
-        response = text_pipeline(prompt, max_new_tokens=100, do_sample=True, temperature=0.3, truncation=True)
+        response = text_pipeline(
+            prompt, max_new_tokens=150, do_sample=True, temperature=0.3, truncation=True)
 
-        return response[0]['generated_text']
+        # Extract only AI response
+        # Extract only AI response and format properly
+        if "AI Response:" in response[0]['generated_text']:
+            ai_response = response[0]['generated_text'].split(
+                "AI Response:")[-1].strip()
+
+            # Convert bullet points to proper formatting
+            # Convert bullets to markdown-style dashes
+            ai_response = ai_response.replace("•", "\n-")
+            # Remove any unwanted asterisks
+            ai_response = ai_response.replace("**", "")
+
+        else:
+            ai_response = "Sorry, I could not extract a valid response."
+
+        return ai_response  # Only return the AI-generated text
+
     except Exception as e:
-        return f" Error generating response: {e}"
-
+        return f"Error generating response: {e}"

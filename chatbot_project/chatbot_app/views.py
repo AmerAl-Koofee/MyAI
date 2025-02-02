@@ -52,16 +52,15 @@ class ChatbotQueryView(APIView):
         results = vector_store.similarity_search(query)
         context_text = "\n".join([r.page_content for r in results]) if results else "No matching documents."
 
-        # Debugging: Print what the chatbot retrieves from the PDF
+        # Debugging: Print retrieved context
         print(f"Retrieved Context for Query: {query}\n{context_text}")
 
-        # Generate AI response using Llama-3
+        # Generate AI response using Llama-3 (now returns a cleaned response)
         ai_response = generate_response(query)
 
-        return Response(
-            {"results": ai_response},
-            status=status.HTTP_200_OK,
-        )
+        print(f"Final Extracted AI Response: {ai_response}")  # Debugging
+
+        return Response({"results": ai_response}, status=status.HTTP_200_OK)
 
 
 # Delete PDF & Embeddings
